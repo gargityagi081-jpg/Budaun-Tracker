@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budaun Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16232B;--muted:#5B6B79;--paper:#EEF1EE;--raised:#fff;--line:#E1E6E0;
+  --sidebar:#122B2E;--teal:#0F5C56;--teal2:#1E9587;--teal-soft:#DCEEE9;
+  --amber:#D98A3D;--amber-soft:#F6E7D2;--rust:#B0473A;--rust-soft:#F3DDD9;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
+h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;letter-spacing:-.01em;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+
+/* ── NAME ENTRY ── */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--sidebar);}
+.auth-card{background:#fff;border-radius:18px;padding:36px 28px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.auth-logo{width:56px;height:56px;background:var(--amber);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:#fff;font-size:21px;margin:0 auto 16px;}
+.auth-card h2{text-align:center;font-size:22px;margin-bottom:6px;}
+.auth-card p{text-align:center;font-size:13px;color:var(--muted);margin-bottom:26px;line-height:1.55;}
+.auth-name-input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;background:var(--paper);margin-bottom:14px;}
+.auth-name-input:focus{outline:2px solid var(--teal2);border-color:transparent;}
+.auth-btn{width:100%;background:var(--teal);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;}
+.auth-btn:hover{background:var(--teal2);}
+.auth-err{color:var(--rust);font-size:12.5px;margin-top:10px;text-align:center;}
+
+/* ── SHELL ── */
+#app-screen{display:none;min-height:100vh;display:none;}
+.shell{display:flex;min-height:100vh;}
+.sidebar{width:130px;flex-shrink:0;background:var(--sidebar);padding:22px 12px;display:flex;flex-direction:column;align-items:center;gap:22px;}
+.logo{width:50px;height:50px;background:var(--amber);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:#fff;font-size:17px;}
+.sidebar nav{display:flex;flex-direction:column;gap:6px;width:100%;}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;color:#AFC4C0;padding:11px 6px;border-radius:11px;font-size:11.5px;font-weight:600;width:100%;transition:all .15s;}
+.nav-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;}
+.nav-btn.active,.nav-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.signout-btn{margin-top:auto;background:transparent;border:1px solid rgba(255,255,255,.15);color:#AFC4C0;border-radius:9px;padding:8px 12px;font-size:12px;font-weight:600;width:100%;}
+.signout-btn:hover{background:rgba(255,255,255,.08);color:#fff;}
+.user-label{font-size:10.5px;color:#AFC4C0;text-align:center;word-break:break-all;padding:0 4px;}
+
+main{flex:1;padding:24px 28px 80px;max-width:1200px;}
+.page-head{margin-bottom:20px;}
+.page-head h1{font-size:26px;}
+.page-head p{font-size:13px;color:var(--muted);margin-top:3px;}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:1fr 290px;gap:18px;align-items:start;}
+@media(max-width:860px){.layout{grid-template-columns:1fr;}}
+.panel{background:var(--raised);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.panel+.panel{margin-top:16px;}
+
+/* ── CALENDAR ── */
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px;}
+.cal-head h2{font-size:22px;}
+.cal-actions{display:flex;gap:8px;align-items:center;}
+.nav-arrows{display:flex;gap:4px;}
+.nav-arrows button{background:var(--paper);border:1px solid var(--line);border-radius:7px;width:30px;height:30px;font-size:15px;color:var(--ink);}
+.nav-arrows button:hover{background:var(--teal-soft);}
+.legend{display:flex;gap:18px;font-size:12.5px;color:var(--ink);margin:10px 0 16px;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.dot.District{background:var(--teal2);}.dot.Block{background:var(--amber);}
+.wk-header{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+.wk-header div{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;text-align:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-cell{min-height:72px;border:1px solid var(--line);border-radius:11px;padding:7px;background:var(--paper);display:flex;flex-direction:column;gap:3px;cursor:pointer;transition:border-color .12s;}
+.cal-cell.empty{background:transparent;border-color:transparent;cursor:default;}
+.cal-cell:not(.empty):hover{border-color:var(--teal2);}
+.cal-cell.selected{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal);}
+.cal-cell.today .daynum{color:var(--teal);}
+.daynum{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;}
+.cell-dots{display:flex;gap:3px;flex-wrap:wrap;}
+.cell-count{font-size:9px;color:var(--muted);margin-top:auto;}
+
+.day-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.day-head h3{font-size:15px;}
+.meeting-card{border:1px solid var(--line);border-left:4px solid var(--teal2);border-radius:11px;padding:11px 13px;margin-bottom:9px;background:var(--raised);}
+.meeting-card.Block{border-left-color:var(--amber);}
+.mc-title{font-weight:600;font-size:14px;}
+.mc-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;}
+.mc-meta{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5;}
+.mc-by{font-size:11px;color:var(--muted);margin-top:5px;}
+.card-links{display:flex;gap:14px;margin-top:7px;}
+.card-links button{background:none;border:none;font-size:11.5px;text-decoration:underline;padding:0;}
+.card-links .edit-l{color:var(--teal);}
+.card-links .del-l{color:var(--rust);}
+.empty-msg{font-size:13px;color:var(--muted);padding:8px 0;}
+
+/* ── ACTIVITY ── */
+.act-item{padding:8px 0;border-bottom:1px dashed var(--line);font-size:12.5px;}
+.act-item:last-child{border-bottom:none;}
+.act-who{font-weight:600;}
+.act-when{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.act-what{color:var(--muted);margin-top:2px;font-size:12px;}
+
+/* ── CHECKLIST ── */
+.cl-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.cl-toolbar select{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;background:#fff;}
+.entry-card{border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px;background:var(--raised);box-shadow:0 2px 8px rgba(0,0,0,.03);}
+.ec-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+.ec-block{display:inline-block;background:var(--amber-soft);color:var(--amber);font-weight:700;font-size:12px;padding:3px 10px;border-radius:999px;}
+.ec-type{font-size:14px;font-weight:600;margin-top:4px;}
+.ec-date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+.ec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;margin-top:12px;font-size:12.5px;}
+.ec-grid .k{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;}
+.ec-grid .v{font-weight:500;margin-top:1px;}
+.ec-text{margin-top:10px;font-size:13px;line-height:1.5;}
+.ec-text .k{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px;}
+.ec-footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);flex-wrap:wrap;gap:8px;}
+.stamp{font-size:11px;color:var(--muted);}
+.file-btn{font-size:12px;color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal2);border-radius:7px;padding:5px 10px;font-weight:600;}
+.file-btn:hover{background:var(--teal2);color:#fff;}
+.file-btn:disabled{opacity:.4;cursor:default;}
+
+/* ── BUTTONS ── */
+.btn{background:var(--teal);color:#fff;border:none;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:600;}
+.btn:hover{background:var(--teal2);}
+.btn.ghost{background:transparent;color:var(--teal);border:1px solid var(--teal);}
+.btn.ghost:hover{background:var(--teal-soft);}
+.btn.danger{background:var(--rust);color:#fff;border:none;}
+.btn.danger:hover{opacity:.88;}
+.btn.sm{padding:6px 11px;font-size:12px;}
+.row-btns{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+
+/* ── OVERLAY / MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(18,43,46,.5);display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;overflow-y:auto;z-index:50;}
+.overlay.hidden{display:none!important;}
+.modal{background:#fff;border-radius:16px;max-width:540px;width:100%;padding:24px 26px 26px;box-shadow:0 24px 60px rgba(0,0,0,.28);}
+.modal.sm{max-width:400px;}
+.modal.wide{max-width:700px;}
+.modal h3{font-size:18px;margin-bottom:3px;}
+.modal .sub{font-size:12.5px;color:var(--muted);margin-bottom:16px;}
+.f{margin-bottom:12px;}
+.f label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
+.f label.req::after{content:" *";color:var(--rust);}
+.f input[type=text],.f input[type=date],.f input[type=time],.f input[type=number],.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:13.5px;background:var(--paper);}
+.f input[type=file]{width:100%;border:1px dashed var(--line);border-radius:8px;padding:10px;font-size:12.5px;background:var(--paper);}
+.f textarea{min-height:62px;resize:vertical;}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.toggle-row{display:flex;gap:7px;}
+.toggle-row button{flex:1;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:8px;font-size:13px;font-weight:600;color:var(--muted);}
+.toggle-row button.on{background:var(--teal);border-color:var(--teal);color:#fff;}
+.ck-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;}
+.ck-grid label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:400;color:var(--ink);text-transform:none;letter-spacing:0;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+.hint{font-size:11px;color:var(--muted);margin-top:4px;}
+.modal-err{color:var(--rust);font-size:12.5px;margin-top:8px;}
+
+.thumb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:10px;}
+.thumb-grid img{width:100%;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
+.thumb-grid a{display:block;}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:60;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;}
+.toast.show{opacity:1;transform:translate(-50%,-6px);}
+.loader{display:flex;align-items:center;justify-content:center;height:60px;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+
+<!-- ========== NAME ENTRY ========== -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">BD</div>
+    <h2>Budaun Tracker</h2>
+    <p>District immunization meeting register.<br>Just enter your name to get started — your data syncs live with the whole team.</p>
+    <input class="auth-name-input" type="text" id="user-name-input" placeholder="Your name (e.g. Gargi Sharma)" maxlength="50"
+      onkeydown="if(event.key==='Enter')enterApp()">
+    <button class="auth-btn" onclick="enterApp()">Open tracker</button>
+    <div id="auth-err" class="auth-err"></div>
+  </div>
+</div>
+
+<!-- ========== APP ========== -->
+<div id="app-screen" style="display:none">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="logo">BD</div>
+      <nav>
+        <button class="nav-btn active" data-tab="calendar">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+          Calendar
+        </button>
+        <button class="nav-btn" data-tab="checklist">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 12.5l2.3 2.3L16 10"/></svg>
+          Checklist
+        </button>
+      </nav>
+      <div class="user-label" id="user-label"></div>
+      <button class="signout-btn" onclick="changeName()">Change name</button>
+    </aside>
+
+    <main>
+      <!-- CALENDAR TAB -->
+      <div id="tab-calendar">
+        <div class="page-head">
+          <h1>Meeting Calendar</h1>
+          <p>Plan and track District and Block level review meetings — Budaun district.</p>
+        </div>
+        <div class="layout">
+          <div>
+            <div class="panel">
+              <div class="cal-head">
+                <h2 id="month-label">—</h2>
+                <div class="cal-actions">
+                  <div class="nav-arrows">
+                    <button onclick="prevMonth()">‹</button>
+                    <button onclick="nextMonth()">›</button>
+                  </div>
+                  <button class="btn sm" onclick="openMeetingModal(null)">+ Plan meeting</button>
+                </div>
+              </div>
+              <div class="legend">
+                <span><span class="dot District"></span>District-level meeting</span>
+                <span><span class="dot Block"></span>Block-level meeting</span>
+              </div>
+              <div class="wk-header">
+                <div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div><div>SUN</div>
+              </div>
+              <div class="cal-grid" id="cal-grid"></div>
+            </div>
+            <div class="panel">
+              <div class="day-head">
+                <h3 id="day-title">Select a date</h3>
+                <button class="btn ghost sm" onclick="openMeetingModal(null)">+ Add</button>
+              </div>
+              <div id="day-meetings"></div>
+            </div>
+          </div>
+          <div>
+            <div class="panel">
+              <h3 style="font-size:14px;margin-bottom:4px;">Recent activity</h3>
+              <p style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Live updates from the whole team.</p>
+              <div id="activity-feed"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHECKLIST TAB -->
+      <div id="tab-checklist" style="display:none">
+        <div class="page-head">
+          <h1>Block Checklist</h1>
+          <p>Weekly Review / Task Force / Data Validation — one entry per meeting held.</p>
+        </div>
+        <div class="cl-toolbar">
+          <select id="block-filter" onchange="renderEntries()">
+            <option value="">All blocks</option>
+          </select>
+          <button class="btn" onclick="openEntryModal(null)">+ New entry</button>
+        </div>
+        <div id="entries-list"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MEETING MODAL -->
+<div class="overlay hidden" id="meeting-overlay">
+  <div class="modal">
+    <h3 id="meeting-modal-title">Plan a meeting</h3>
+    <div class="sub">Saved to Firestore — visible to the whole team instantly.</div>
+    <div class="f"><label class="req">Meeting level</label>
+      <div class="toggle-row" id="level-toggle">
+        <button data-level="District" class="on">District</button>
+        <button data-level="Block">Block</button>
+      </div>
+    </div>
+    <div class="r2">
+      <div class="f"><label>State</label><input type="text" id="m-state" value="Uttar Pradesh"></div>
+      <div class="f"><label>District</label><input type="text" id="m-district" value="Budaun"></div>
+    </div>
+    <div class="f" id="m-block-wrap" style="display:none">
+      <label class="req">Block</label><select id="m-block"></select>
+    </div>
+    <div class="r2">
+      <div class="f"><label class="req">Date</label><input type="date" id="m-date"></div>
+      <div class="f"><label>Type</label><select id="m-type"><option>Physical</option><option>Virtual</option></select></div>
+    </div>
+    <div class="r2">
+      <div class="f"><label class="req">Start time</label><input type="time" id="m-start"></div>
+      <div class="f"><label class="req">End time</label><input type="time" id="m-end"></div>
+    </div>
+    <div class="f"><label class="req">Meeting name</label>
+      <select id="m-name-sel"></select>
+      <input type="text" id="m-name-other" placeholder="Type meeting name" style="margin-top:6px;display:none">
+    </div>
+    <div class="f"><label>Venue</label><input type="text" id="m-venue" placeholder="e.g. District Collector Office / Google Meet"></div>
+    <div class="f"><label>Brief agenda / remarks</label><textarea id="m-agenda"></textarea></div>
+    <div class="modal-err" id="m-err"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeMeetingModal()">Cancel</button>
+      <button class="btn" onclick="saveMeeting()">Save meeting</button>
+    </div>
+  </div>
+</div>
+
+<!-- ENTRY MODAL -->
+<div class="overlay hidden" id="entry-overlay">
+  <div class="modal">
+    <h3 id="entry-modal-title">New block meeting entry</h3>
+    <div class="sub">Saved to Firestore — visible to the whole team instantly.</div>
+    <div class="f"><label class="req">Block</label><select id="e-block"></select></div>
+    <div class="f"><label class="req">Meeting type</label>
+      <select id="e-type" onchange="document.getElementById('e-type-other').style.display=this.value==='Other'?'':'none'">
+        <option>Block Weekly Review Meeting (BWR)</option>
+        <option>Block Task Force (BTFI)</option>
+        <option>Block Data Validation Meeting (BDVC)</option>
+        <option>Combined BWR and BDVC</option>
+        <option>TTF</option>
+        <option value="Other">Other</option>
+      </select>
+      <input type="text" id="e-type-other" placeholder="Specify" style="margin-top:6px;display:none">
+    </div>
+    <div class="r2">
+      <div class="f"><label class="req">Date</label><input type="date" id="e-date"></div>
+      <div class="f"><label>Time</label><input type="time" id="e-time"></div>
+    </div>
+    <div class="f"><label>Participants present</label>
+      <div class="ck-grid" id="e-participants">
+        <label><input type="checkbox" value="MOIC"> MOIC</label>
+        <label><input type="checkbox" value="BPM"> BPM</label>
+        <label><input type="checkbox" value="BCPM"> BCPM</label>
+        <label><input type="checkbox" value="RI Data Operator"> RI Data Operator</label>
+        <label><input type="checkbox" value="FM"> FM</label>
+        <label><input type="checkbox" value="Block Coordinator ADRA"> Block Coordinator ADRA</label>
+      </div>
+      <input type="text" id="e-part-other" placeholder="Other participants" style="margin-top:6px;width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--paper)">
+    </div>
+    <div class="r2">
+      <div class="f"><label>ANM present</label><input type="number" min="0" id="e-anm-p"></div>
+      <div class="f"><label>ANM total</label><input type="number" min="0" id="e-anm-t"></div>
+    </div>
+    <div class="r2">
+      <div class="f"><label>Supervisors present</label><input type="number" min="0" id="e-sup-p"></div>
+      <div class="f"><label>Supervisors total</label><input type="number" min="0" id="e-sup-t"></div>
+    </div>
+    <div class="f"><label>Topics discussed</label><textarea id="e-topics"></textarea></div>
+    <div class="f"><label class="req">Minutes signed copy (image)</label>
+      <input type="file" id="e-minutes-file" accept="image/*" multiple>
+      <div class="hint" id="e-minutes-hint">Choose one or more images from your device.</div>
+    </div>
+    <div class="f"><label>Meeting photos</label>
+      <input type="file" id="e-photos-file" accept="image/*" multiple>
+      <div class="hint" id="e-photos-hint">Optional.</div>
+    </div>
+    <div class="f"><label>Follow-up actions / decisions</label><textarea id="e-followup"></textarea></div>
+    <div class="modal-err" id="e-err"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeEntryModal()">Cancel</button>
+      <button class="btn" id="e-save-btn" onclick="saveEntry()">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="overlay hidden" id="confirm-overlay">
+  <div class="modal sm">
+    <h3 id="confirm-title">Delete?</h3>
+    <p class="sub" id="confirm-sub" style="margin-bottom:0"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeConfirm(false)">Cancel</button>
+      <button class="btn danger" onclick="closeConfirm(true)">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE VIEWER -->
+<div class="overlay hidden" id="viewer-overlay">
+  <div class="modal wide">
+    <h3 id="viewer-title">Images</h3>
+    <div class="thumb-grid" id="viewer-grid"></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="document.getElementById('viewer-overlay').classList.add('hidden')">Close</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ========== FIREBASE SDK ========== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot,
+         query, orderBy, serverTimestamp
+       } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+       } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+// ── Firebase config ──
+const app = initializeApp({
+  apiKey: "AIzaSyDQLx6r21CwSW5aZZEoGtuYOcv2lGAiJlw",
+  authDomain: "budaun-tracker.firebaseapp.com",
+  projectId: "budaun-tracker",
+  storageBucket: "budaun-tracker.firebasestorage.app",
+  messagingSenderId: "178987130113",
+  appId: "1:178987130113:android:54ac5cb26cb774a4b44f00"
+});
+const db  = getFirestore(app);
+const stor = getStorage(app);
+
+// ── name-only auth ──
+// Name is stored in localStorage — no email/password needed.
+// Firestore is open to everyone with the file (rules set to allow read/write).
+window.enterApp = function(){
+  const name = $('user-name-input').value.trim();
+  if(!name){ $('auth-err').textContent = 'Please enter your name to continue.'; return; }
+  localStorage.setItem('budaun-tracker-username', name);
+  currentUser = { displayName: name };
+  $('auth-screen').style.display = 'none';
+  $('app-screen').style.display = '';
+  $('user-label').textContent = name;
+  startListeners();
+  initUI();
+};
+window.changeName = function(){
+  const name = prompt('Your name:', currentUser?.displayName || '');
+  if(name && name.trim()){
+    currentUser = { displayName: name.trim() };
+    localStorage.setItem('budaun-tracker-username', name.trim());
+    $('user-label').textContent = name.trim();
+    showToast('Name updated');
+  }
+};
+// Auto-login if name already saved
+(function(){
+  const saved = localStorage.getItem('budaun-tracker-username');
+  if(saved){
+    currentUser = { displayName: saved };
+    $('auth-screen').style.display = 'none';
+    $('app-screen').style.display = '';
+    $('user-label').textContent = saved;
+    startListeners();
+    initUI();
+  }
+})();
+
+// ── constants ──
+const BLOCKS = ["Ambiapur","Asafpur","Bisauli","Dahgavan","Dataganj","Islamnagar","Jagat","Mion",
+                "Qadar Chowk","Sahaswan","Salarpur","Samrer","Ujhani","Usawan","Wazirganj"];
+const M_NAMES = {
+  District:["District Task Force for Immunization (DTFI)","District Data Validation Committee (DDVC)",
+            "District AEFI Committee","BMO Review Meeting / QRM","District Weekly Review (DWR)"],
+  Block:["Block Task Force for Immunization (BTFI)","Block Data Validation Committee",
+         "ANM Review Meeting","Block Weekly Review Meeting (BWR)"]
+};
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// ── state ──
+let currentUser=null, viewYear=new Date().getFullYear(), viewMonth=new Date().getMonth();
+let selectedDate=todayISO(), meetings=[], entries=[], activity=[];
+let editingMeetingId=null, editingEntryId=null, currentLevel="District";
+let confirmResolve=null, unsubMeetings=null, unsubEntries=null, unsubActivity=null;
+
+// ── helpers ──
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function esc(s){ return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function $(id){ return document.getElementById(id); }
+function showToast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(showToast._h); showToast._h=setTimeout(()=>t.classList.remove('show'),2800);
+}
+function fmtTime(t){
+  if(!t)return''; const[h,m]=t.split(':').map(Number);
+  return `${((h+11)%12)+1}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
+}
+function fmtDateLong(iso){
+  if(!iso)return''; const d=new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+function fmtDateShort(iso){
+  if(!iso)return'—'; const d=new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+function timeAgo(ts){
+  if(!ts)return''; const diff=Date.now()-ts.toMillis?.()-(ts.toMillis?0:0)||Date.now()-ts;
+  const ms=typeof ts==='number'?Date.now()-ts:Date.now()-ts.toMillis();
+  const m=Math.floor(ms/60000);
+  if(m<1)return'just now'; if(m<60)return`${m}m ago`;
+  const h=Math.floor(m/60); if(h<24)return`${h}h ago`;
+  return`${Math.floor(h/24)}d ago`;
+}
+
+// ── auth handled above ──
+
+// ── real-time listeners ──
+function startListeners(){
+  unsubMeetings = onSnapshot(
+    query(collection(db,'meetings'),orderBy('date','asc')),
+    snap=>{ meetings=snap.docs.map(d=>({id:d.id,...d.data()})); renderCalendar(); renderDayPanel(); }
+  );
+  unsubEntries = onSnapshot(
+    query(collection(db,'checklistEntries'),orderBy('date','desc')),
+    snap=>{ entries=snap.docs.map(d=>({id:d.id,...d.data()})); renderEntries(); }
+  );
+  unsubActivity = onSnapshot(
+    query(collection(db,'activityLog'),orderBy('ts','desc')),
+    snap=>{ activity=snap.docs.map(d=>({id:d.id,...d.data()})); renderActivity(); }
+  );
+}
+async function logActivity(action,summary){
+  await addDoc(collection(db,'activityLog'),{
+    user:currentUser?.displayName||'User',
+    action, summary, ts:serverTimestamp()
+  });
+}
+
+// ── init UI ──
+function initUI(){
+  // populate block selects
+  ['m-block','e-block'].forEach(id=>{
+    const s=$(id); s.innerHTML='<option value="">Select block</option>'+BLOCKS.map(b=>`<option>${b}</option>`).join('');
+  });
+  $('block-filter').innerHTML='<option value="">All blocks</option>'+BLOCKS.map(b=>`<option>${b}</option>`).join('');
+  // level toggle
+  document.querySelectorAll('#level-toggle button').forEach(b=>{
+    b.onclick=()=>{ document.querySelectorAll('#level-toggle button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); currentLevel=b.dataset.level;
+      $('m-block-wrap').style.display=currentLevel==='Block'?'':'none';
+      populateMeetingNames(currentLevel); };
+  });
+  // nav tabs
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.onclick=()=>{ document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+      $('tab-calendar').style.display=b.dataset.tab==='calendar'?'':'none';
+      $('tab-checklist').style.display=b.dataset.tab==='checklist'?'':'none'; };
+  });
+  renderCalendar(); renderDayPanel(); renderActivity(); renderEntries();
+}
+function populateMeetingNames(level){
+  const sel=$('m-name-sel'), names=M_NAMES[level]||M_NAMES.District;
+  sel.innerHTML='<option value="">Select meeting name</option>'+names.map(n=>`<option>${n}</option>`).join('');
+  sel.onchange=()=>{ $('m-name-other').style.display=sel.value===''||sel.value===undefined?'none':'none'; };
+}
+
+// ── calendar ──
+window.prevMonth=()=>{ viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} renderCalendar(); };
+window.nextMonth=()=>{ viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} renderCalendar(); };
+
+function renderCalendar(){
+  $('month-label').textContent=`${MONTHS[viewMonth]} ${viewYear}`;
+  const grid=$('cal-grid'); grid.innerHTML='';
+  const first=new Date(viewYear,viewMonth,1);
+  let off=first.getDay()-1; if(off<0)off=6;
+  const days=new Date(viewYear,viewMonth+1,0).getDate();
+  for(let i=0;i<off;i++){const d=document.createElement('div');d.className='cal-cell empty';grid.appendChild(d);}
+  for(let day=1;day<=days;day++){
+    const iso=`${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dm=meetings.filter(m=>m.date===iso);
+    const levels=[...new Set(dm.map(m=>m.level))];
+    const cell=document.createElement('div');
+    cell.className='cal-cell'+(iso===todayISO()?' today':'')+(iso===selectedDate?' selected':'');
+    cell.innerHTML=`<div class="daynum">${day}</div><div class="cell-dots">${levels.map(l=>`<span class="dot ${l}"></span>`).join('')}</div>${dm.length?`<div class="cell-count">${dm.length} meeting${dm.length>1?'s':''}</div>`:''}`;
+    cell.onclick=()=>{ selectedDate=iso; renderCalendar(); renderDayPanel(); };
+    grid.appendChild(cell);
+  }
+}
+
+function renderDayPanel(){
+  $('day-title').textContent=selectedDate?fmtDateLong(selectedDate):'Select a date';
+  const box=$('day-meetings');
+  if(!selectedDate){box.innerHTML='<p class="empty-msg">Tap a day to see meetings.</p>';return;}
+  const list=meetings.filter(m=>m.date===selectedDate).sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));
+  if(!list.length){box.innerHTML='<p class="empty-msg">No meetings planned for this date yet.</p>';return;}
+  box.innerHTML=list.map(m=>`
+    <div class="meeting-card ${m.level}">
+      <div class="mc-title">${esc(m.meetingName)}</div>
+      <div class="mc-time">${fmtTime(m.startTime)} – ${fmtTime(m.endTime)} · ${esc(m.level)}-level</div>
+      <div class="mc-meta">
+        ${m.level==='Block'?`Block: ${esc(m.block)}<br>`:''}
+        ${esc(m.district)}, ${esc(m.state)}<br>
+        Mode: ${esc(m.type)}${m.venue?` · ${esc(m.venue)}`:''}
+        ${m.agenda?`<br>Agenda: ${esc(m.agenda)}`:''}
+      </div>
+      <div class="mc-by">Added by <b>${esc(m.addedBy)}</b>${m.updatedBy&&m.updatedBy!==m.addedBy?` · edited by ${esc(m.updatedBy)}`:''}</div>
+      <div class="card-links">
+        <button class="edit-l" onclick="openMeetingModal('${m.id}')">Edit</button>
+        <button class="del-l" onclick="deleteMeeting('${m.id}','${esc(m.meetingName)}','${m.date}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── activity ──
+function renderActivity(){
+  const box=$('activity-feed');
+  if(!activity.length){box.innerHTML='<p class="empty-msg">No activity yet.</p>';return;}
+  box.innerHTML=activity.slice(0,25).map(a=>`
+    <div class="act-item">
+      <span class="act-who">${esc(a.user)}</span> <span class="act-when">· ${timeAgo(a.ts)}</span>
+      <div class="act-what">${esc(a.summary)}</div>
+    </div>`).join('');
+}
+
+// ── meeting modal ──
+window.openMeetingModal=function(id){
+  editingMeetingId=id||null;
+  const m=id?meetings.find(x=>x.id===id):null;
+  $('meeting-modal-title').textContent=m?'Edit meeting':'Plan a meeting';
+  currentLevel=m?.level||'District';
+  document.querySelectorAll('#level-toggle button').forEach(b=>b.classList.toggle('on',b.dataset.level===currentLevel));
+  $('m-block-wrap').style.display=currentLevel==='Block'?'':'none';
+  $('m-state').value=m?.state||'Uttar Pradesh';
+  $('m-district').value=m?.district||'Budaun';
+  $('m-block').value=m?.block||'';
+  $('m-date').value=m?.date||selectedDate||todayISO();
+  $('m-type').value=m?.type||'Physical';
+  $('m-start').value=m?.startTime||'10:00';
+  $('m-end').value=m?.endTime||'11:00';
+  populateMeetingNames(currentLevel);
+  $('m-name-sel').value=m?.meetingName||'';
+  $('m-name-other').style.display='none';
+  $('m-venue').value=m?.venue||'';
+  $('m-agenda').value=m?.agenda||'';
+  $('m-err').textContent='';
+  $('meeting-overlay').classList.remove('hidden');
+};
+window.closeMeetingModal=()=>$('meeting-overlay').classList.add('hidden');
+
+window.saveMeeting=async function(){
+  const date=$('m-date').value, start=$('m-start').value, end=$('m-end').value;
+  let name=$('m-name-sel').value||$('m-name-other').value.trim();
+  if(!date||!start||!end||!name){$('m-err').textContent='Please fill date, time and meeting name';return;}
+  if(currentLevel==='Block'&&!$('m-block').value){$('m-err').textContent='Please select a block';return;}
+  const userName=currentUser?.displayName||'User';
+  const now=Date.now();
+  const payload={
+    level:currentLevel, state:$('m-state').value.trim(), district:$('m-district').value.trim(),
+    block:currentLevel==='Block'?$('m-block').value:'',
+    date, startTime:start, endTime:end, meetingName:name,
+    type:$('m-type').value, venue:$('m-venue').value.trim(), agenda:$('m-agenda').value.trim(),
+    updatedBy:userName, updatedAt:now
+  };
+  try{
+    if(editingMeetingId){
+      await setDoc(doc(db,'meetings',editingMeetingId),{...payload},{merge:true});
+      await logActivity('edit-meeting',`Edited "${name}" (${currentLevel}-level) on ${date}`);
+      showToast('Meeting updated');
+    } else {
+      await addDoc(collection(db,'meetings'),{...payload,addedBy:userName,addedAt:now});
+      await logActivity('add-meeting',`Planned "${name}" (${currentLevel}-level) on ${date}`);
+      showToast('Meeting saved'); selectedDate=date;
+    }
+    closeMeetingModal();
+  }catch(e){$('m-err').textContent='Save failed: '+e.message;}
+};
+
+window.deleteMeeting=async function(id,name,date){
+  const ok=await askConfirm('Delete this meeting?',`"${name}" on ${date} will be permanently removed for the whole team.`);
+  if(!ok)return;
+  await deleteDoc(doc(db,'meetings',id));
+  await logActivity('delete-meeting',`Deleted meeting "${name}" on ${date}`);
+  showToast('Meeting deleted');
+};
+
+// ── checklist ──
+function renderEntries(){
+  const filter=$('block-filter').value;
+  const box=$('entries-list');
+  let list=entries.filter(e=>!filter||e.block===filter);
+  if(!list.length){box.innerHTML=`<p class="empty-msg">No entries yet${filter?' for '+filter:''}.</p>`;return;}
+  box.innerHTML=list.map(e=>{
+    const mn=(e.minutesFiles||[]).length, pn=(e.photosFiles||[]).length;
+    const parts=[...(e.participants||[]),e.participantsOther].filter(Boolean).join(', ')||'—';
+    return`<div class="entry-card">
+      <div class="ec-top">
+        <div><span class="ec-block">${esc(e.block)}</span><div class="ec-type">${esc(e.meetingType)}</div></div>
+        <div class="ec-date">${fmtDateShort(e.date)}${e.time?' · '+fmtTime(e.time):''}</div>
+      </div>
+      <div class="ec-grid">
+        <div><div class="k">Participants</div><div class="v">${esc(parts)}</div></div>
+        <div><div class="k">ANM present/total</div><div class="v">${esc(e.anmPresent||'—')} / ${esc(e.anmTotal||'—')}</div></div>
+        <div><div class="k">Supervisors present/total</div><div class="v">${esc(e.supPresent||'—')} / ${esc(e.supTotal||'—')}</div></div>
+      </div>
+      ${e.topics?`<div class="ec-text"><span class="k">Topics discussed</span>${esc(e.topics)}</div>`:''}
+      ${e.followup?`<div class="ec-text"><span class="k">Follow-up actions</span>${esc(e.followup)}</div>`:''}
+      <div class="ec-footer">
+        <div class="stamp">Added by <b>${esc(e.addedBy)}</b>${e.updatedBy&&e.updatedBy!==e.addedBy?` · edited by ${esc(e.updatedBy)}`:''}</div>
+        <div class="row-btns">
+          <button class="file-btn" onclick="viewImages('${e.id}','minutes')" ${mn?'':'disabled'}>Minutes (${mn})</button>
+          <button class="file-btn" onclick="viewImages('${e.id}','photos')" ${pn?'':'disabled'}>Photos (${pn})</button>
+          <button class="btn ghost sm" onclick="openEntryModal('${e.id}')">Edit</button>
+          <button class="btn danger sm" onclick="deleteEntry('${e.id}','${esc(e.block)}','${e.date}','${esc(e.meetingType)}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.openEntryModal=function(id){
+  editingEntryId=id||null;
+  const e=id?entries.find(x=>x.id===id):null;
+  $('entry-modal-title').textContent=e?'Edit block meeting entry':'New block meeting entry';
+  $('e-block').value=e?.block||'';
+  const types=["Block Weekly Review Meeting (BWR)","Block Task Force (BTFI)","Block Data Validation Meeting (BDVC)","Combined BWR and BDVC","TTF"];
+  $('e-type').value=types.includes(e?.meetingType)?e.meetingType:(e?.meetingType?'Other':types[0]);
+  $('e-type-other').style.display=$('e-type').value==='Other'?'':'none';
+  $('e-type-other').value=($('e-type').value==='Other'?e?.meetingType:'')||'';
+  $('e-date').value=e?.date||todayISO();
+  $('e-time').value=e?.time||'';
+  document.querySelectorAll('#e-participants input').forEach(cb=>cb.checked=(e?.participants||[]).includes(cb.value));
+  $('e-part-other').value=e?.participantsOther||'';
+  $('e-anm-p').value=e?.anmPresent||''; $('e-anm-t').value=e?.anmTotal||'';
+  $('e-sup-p').value=e?.supPresent||''; $('e-sup-t').value=e?.supTotal||'';
+  $('e-topics').value=e?.topics||''; $('e-followup').value=e?.followup||'';
+  $('e-minutes-file').value=''; $('e-photos-file').value='';
+  const mc=(e?.minutesFiles||[]).length, pc=(e?.photosFiles||[]).length;
+  $('e-minutes-hint').textContent=mc?`${mc} image(s) already attached — choose more to add.`:'Choose one or more images.';
+  $('e-photos-hint').textContent=pc?`${pc} photo(s) already attached — choose more to add.`:'Optional.';
+  $('e-err').textContent='';
+  $('entry-overlay').classList.remove('hidden');
+};
+window.closeEntryModal=()=>$('entry-overlay').classList.add('hidden');
+
+window.saveEntry=async function(){
+  const block=$('e-block').value, date=$('e-date').value;
+  let mtype=$('e-type').value; if(mtype==='Other')mtype=$('e-type-other').value.trim();
+  if(!block||!date||!mtype){$('e-err').textContent='Please fill block, meeting type and date';return;}
+  const existing=editingEntryId?entries.find(x=>x.id===editingEntryId):null;
+  const existingMins=(existing?.minutesFiles||[]);
+  const newMinsFiles=$('e-minutes-file').files;
+  if(!existingMins.length&&(!newMinsFiles||!newMinsFiles.length)){
+    $('e-err').textContent='Please attach the signed meeting minutes image';return;
+  }
+  const btn=$('e-save-btn'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    const entryId=editingEntryId||doc(collection(db,'checklistEntries')).id;
+    const uploadImg=async(file,kind)=>{
+      const r=ref(stor,`checklist/${entryId}/${kind}/${Date.now()}_${file.name}`);
+      await uploadBytes(r,file);
+      return{name:file.name,url:await getDownloadURL(r),path:r.fullPath};
+    };
+    const addedMins=[]; for(const f of newMinsFiles) addedMins.push(await uploadImg(f,'minutes'));
+    const addedPics=[]; for(const f of $('e-photos-file').files) addedPics.push(await uploadImg(f,'photos'));
+    const participants=[...document.querySelectorAll('#e-participants input:checked')].map(c=>c.value);
+    const userName=currentUser?.displayName||'User';
+    const now=Date.now();
+    const payload={
+      block, meetingType:mtype, date, time:$('e-time').value,
+      participants, participantsOther:$('e-part-other').value.trim(),
+      anmPresent:$('e-anm-p').value, anmTotal:$('e-anm-t').value,
+      supPresent:$('e-sup-p').value, supTotal:$('e-sup-t').value,
+      topics:$('e-topics').value.trim(), followup:$('e-followup').value.trim(),
+      minutesFiles:[...existingMins,...addedMins],
+      photosFiles:[...(existing?.photosFiles||[]),...addedPics],
+      updatedBy:userName, updatedAt:now
+    };
+    if(editingEntryId){
+      await setDoc(doc(db,'checklistEntries',entryId),payload,{merge:true});
+      await logActivity('edit-entry',`Edited ${mtype} for ${block} (${date})`);
+      showToast('Entry updated');
+    } else {
+      await setDoc(doc(db,'checklistEntries',entryId),{...payload,addedBy:userName,addedAt:now});
+      await logActivity('add-entry',`Logged ${mtype} for ${block} (${date})`);
+      showToast('Entry saved');
+    }
+    closeEntryModal();
+  }catch(e){$('e-err').textContent='Save failed: '+e.message;}
+  btn.disabled=false; btn.textContent='Save entry';
+};
+
+window.deleteEntry=async function(id,block,date,mtype){
+  const ok=await askConfirm('Delete this entry?',`${mtype} for ${block} on ${date} — including images — will be permanently removed.`);
+  if(!ok)return;
+  const e=entries.find(x=>x.id===id);
+  if(e){ for(const f of [...(e.minutesFiles||[]),...(e.photosFiles||[])]) try{await deleteObject(ref(stor,f.path));}catch(_){} }
+  await deleteDoc(doc(db,'checklistEntries',id));
+  await logActivity('delete-entry',`Deleted ${mtype} entry for ${block} (${date})`);
+  showToast('Entry deleted');
+};
+
+window.viewImages=function(entryId,kind){
+  const e=entries.find(x=>x.id===entryId); if(!e)return;
+  const files=kind==='minutes'?e.minutesFiles:e.photosFiles;
+  $('viewer-title').textContent=kind==='minutes'?'Meeting Minutes':'Meeting Photos';
+  $('viewer-grid').innerHTML=(!files||!files.length)
+    ?'<p class="empty-msg">No images attached.</p>'
+    :files.map(f=>`<a href="${f.url}" target="_blank"><img src="${f.url}" alt="${esc(f.name)}"></a>`).join('');
+  $('viewer-overlay').classList.remove('hidden');
+};
+
+// ── confirm dialog ──
+function askConfirm(title,sub){
+  return new Promise(resolve=>{
+    $('confirm-title').textContent=title;
+    $('confirm-sub').textContent=sub;
+    $('confirm-overlay').classList.remove('hidden');
+    confirmResolve=resolve;
+  });
+}
+window.closeConfirm=function(result){
+  $('confirm-overlay').classList.add('hidden');
+  confirmResolve?.(result); confirmResolve=null;
+};
+</script>
+</body>
+</html>
